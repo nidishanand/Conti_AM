@@ -1,5 +1,8 @@
 package com.conti.utility;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -18,6 +21,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.apache.commons.collections.bag.SynchronizedSortedBag;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpDelete;
@@ -28,6 +32,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.poi.ss.usermodel.Header;
 import org.apache.wink.json4j.JSONObject;
 import org.eclipse.lyo.client.oslc.jazz.JazzFormAuthClient;
 import org.w3c.dom.Document;
@@ -37,9 +42,11 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import com.conti.constants.Constants;
+import com.conti.login.DNGLoginUtility;
 import com.conti.pojo.ArtifactAttributePojo;
 import com.conti.pojo.AttributeDataTypePojo;
 import com.conti.pojo.AttributeDetailsPojo;
+import com.conti.pojo.LinkConstraintsPojo;
 import com.conti.pojo.ProjectDetailsPojo;
 
 /**
@@ -433,12 +440,10 @@ public class RestUtility {
 			// TODO: handle exception
 			logger.error(e);
 			logger.error("Excpetion while deleting enum node from attribute data type " + dataTypeName + " for the project " +projectDetailsPojo.getProjectName() + " , "
-							+ projectDetailsPojo.getComponentName() + " , " + projectDetailsPojo.getStreamName());
-				
+							+ projectDetailsPojo.getComponentName() + " , " + projectDetailsPojo.getStreamName());	
 		}
 		return attributeDataTypedoc;
 	}
-
 	/**
 	 * method to delete the attributes for the artifact
 	 * 
@@ -478,9 +483,7 @@ public class RestUtility {
 							artifactAttributeList.addAll(Arrays.asList(artifactAttributesArr));
 							return removeAttributeFromArtifact(client, artifactTypeNodes.item(i), artifactAttributeList,
 									attributeDetailsPojo, projectDetailsPojo, artifactTypeName, attributeName);
-
 						}
-
 					}
 				}
 			}
@@ -497,9 +500,9 @@ public class RestUtility {
 			logger.error("Exception while deleting the attribute " + attributeName + "  from the artifact type "
 					+ artifactTypeName + " in the project " + projectDetailsPojo.getProjectName() + " , "
 					+ projectDetailsPojo.getComponentName() + " , " + projectDetailsPojo.getStreamName());
+			
 			return false;
-		}
-
+		} 
 	}
 
 	/**
@@ -527,6 +530,148 @@ public class RestUtility {
 
 	}
 
+	public boolean deletelinkConstraint(JazzFormAuthClient client, LinkConstraintsPojo linkConstraintsPojo,
+			ProjectDetailsPojo projectDetailsPojo ) {
+		
+		String Targetlink = null;
+        String Sourcelink = null;
+        String linktype_link = null;
+        HashMap<String, String> headersMap= new HashMap<>();
+        boolean a = true;
+        try {
+		Document projectPropertiesDoc = getProjectPropertiesDetails(client, projectDetailsPojo);
+		
+            NodeList ObjectType = projectPropertiesDoc.getElementsByTagName(Constants.RM_ObjectType);
+            for (int i = 0; i < ObjectType.getLength(); i++) {
+                Element ObjectTypeElement = (Element) ObjectType.item(i);
+                String sameas = ObjectTypeElement.getElementsByTagName(Constants.OWL_Sameas).item(0).getAttributes().getNamedItem(Constants.Resource).getTextContent();
+                String title = ObjectTypeElement.getElementsByTagName(Constants.Dcterms_Title).item(0).getTextContent();
+                if (linkConstraintsPojo.getTargetLink().equals(title)) {
+                	Targetlink = sameas;
+                }
+                if (linkConstraintsPojo.getSourceLink().equals(title)) 
+                	{
+                	Sourcelink = sameas;
+                	} 
+                if (linkConstraintsPojo.getTargetLink().equals("ANY")) 
+            	{
+            	Targetlink = "http://www.ibm.com/xmlns/rdm/rdf/linkConstraint/Any";
+            	} 
+                if (linkConstraintsPojo.getSourceLink().equals("ANY")) 
+            	{
+            	Sourcelink = "http://www.ibm.com/xmlns/rdm/rdf/linkConstraint/Any";
+            	} 
+                } 
+            NodeList linkTypeNodes = projectPropertiesDoc.getElementsByTagName(Constants.LinkType);
+            for (int i = 0; i < linkTypeNodes.getLength(); i++) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+                Element linkTypeElement = (Element) linkTypeNodes.item(i);
+                NodeList titlenodes = linkTypeElement.getElementsByTagName(Constants.Dcterms_Title);
+                for(int j=0; j<titlenodes.getLength();j++) {
+                	Element titleelement = (Element) titlenodes.item(j);
+                    String titleValue = titleelement.getTextContent();
+                    
+                    if (linkConstraintsPojo.getLinkType().equals(titleValue)) {
+                    	linktype_link = linkTypeElement.getAttribute(Constants.RDF_About);
+                    }
+                }
+            }
+            if(Sourcelink==null) {
+            	logger.info("Source Artifact Type is not Found , Check is the Source Artifact Type { "+ linkConstraintsPojo.getSourceLink() +" } is Correct . In Project Area"+ projectDetailsPojo.getProjectName() + " , " + projectDetailsPojo.getComponentName() + " , "
+    					+ projectDetailsPojo.getStreamName());
+            	a= false;
+            	return false;
+            }else if(linktype_link==null){
+            	logger.info("Link Type is not Found , Check is the Link Type { "+ linkConstraintsPojo.getLinkType() +" } is Correct . In Project Area "+ projectDetailsPojo.getProjectName() + " , " + projectDetailsPojo.getComponentName() + " , "
+    					+ projectDetailsPojo.getStreamName());
+            	a= false;
+            	return false;
+            }else if(Targetlink==null) {
+            	logger.info("Target Artifact Type is not Found , Check is the Target Artifact Type { "+ linkConstraintsPojo.getTargetLink() + " } is Correct. In Project Area  "+ projectDetailsPojo.getProjectName() + " , " + projectDetailsPojo.getComponentName() + " , "
+    					+ projectDetailsPojo.getStreamName());
+                a= false;
+                return false;
+            }
+            if (a==true) {
+            String putRequestBody = LinkconstraintsDetails(client,Targetlink,Sourcelink,linktype_link,projectDetailsPojo,linkConstraintsPojo);
+            headersMap = HeaderUtility.createHeadersForChangeSet_withContent(projectDetailsPojo);
+            
+    		String LinkConurl = client.getUrl()+Constants.LinkConsurl;
+            HttpResponse responceLinkConstrains = putRequestforUrl(client, LinkConurl, putRequestBody, headersMap);  
+            
+            if (responceLinkConstrains == null) {
+				return false;
+			} else if (responceLinkConstrains.getStatusLine().getStatusCode() == 200) {
+				return true;
+			}
+            }
+        }catch (Exception e) {
+        	
+        	logger.error( "Exeption "+ e + " . In Project Area : "
+					+ projectDetailsPojo.getProjectName() + " , " + projectDetailsPojo.getComponentName() + " , "+ projectDetailsPojo.getStreamName());
+				
+			}
+        return true;
+	}
+	
+	public String LinkconstraintsDetails(JazzFormAuthClient client,String Targetlink,String Sourcelink,String linktype_link,ProjectDetailsPojo projectDetailsPojo, LinkConstraintsPojo linkConstraintsPojo) {
+		
+		String baseUrl_linkConstraints = client.getUrl()+Constants.Linkconstraints;
+        String changeset_lc = projectDetailsPojo.getChangeSetUrl();
+        String modifiedResponse = null;
+        boolean a = false;
+        try {
+        org.w3c.dom.Document responcedata_lc = getRequestforUrl(client, baseUrl_linkConstraints , changeset_lc);
+        
+        NodeList Lcnodes = responcedata_lc.getElementsByTagName(Constants.RM_Linkconstraints);
+        for (int i = 0; i < Lcnodes.getLength(); i++) {
+            Element lcElement = (Element) Lcnodes.item(i);
+            String Lc_about = lcElement.getAttribute(Constants.RDF_About);
+            String LinkConurl = client.getUrl()+Constants.LinkConsurl;
+            if(LinkConurl.equals(Lc_about)) {
+            	
+            	NodeList membernodes = lcElement.getElementsByTagName(Constants.Member);
+            	for (int y=0; y < membernodes.getLength(); y++) {
+            		
+            		Element memberelement = (Element) membernodes.item(y);
+            		
+            		NodeList Allowedpatternsnodes = memberelement.getElementsByTagName(Constants.RM_Allowedpattern);
+ 
+            		for (int x = 0; x < Allowedpatternsnodes.getLength(); x++) {
+            			
+            			Element Ap_Element = (Element) Allowedpatternsnodes.item(x);
+            			
+            			Element objectPatternElement = (Element) Ap_Element.getElementsByTagName(Constants.RM_objectpattern).item(0);
+                        Element predicatePatternElement = (Element) Ap_Element.getElementsByTagName(Constants.RM_predicatepattern).item(0);
+                        Element subjectPatternElement = (Element) Ap_Element.getElementsByTagName(Constants.RM_subjectpattern).item(0);
+
+                        String objectPattern = objectPatternElement.getAttribute(Constants.Resource);
+                        String predicatePattern = predicatePatternElement.getAttribute(Constants.Resource);
+                        String subjectPattern = subjectPatternElement.getAttribute(Constants.Resource);
+                       
+            			if(Sourcelink.equals(subjectPattern) && Targetlink.equals(objectPattern) && linktype_link.equals(predicatePattern)) {
+            				((Node)memberelement).getParentNode().removeChild((Node)memberelement);		
+            				System.out.println("Found and Deleted");
+            				a = true;
+            				
+                    } 
+            }
+            }
+            }
+        }      
+        if (!a) {
+        	throw new Exception("Link Constraint : "+ linkConstraintsPojo.getSourceLink()+" , "+ linkConstraintsPojo.getLinkType()+" , "+ linkConstraintsPojo.getTargetLink()+" . "+" Does not exist in the project area");
+        }
+        TransformerFactory transformerFactory = TransformerFactory.newInstance();
+        Transformer transformer = transformerFactory.newTransformer();
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource((Node) responcedata_lc), new StreamResult(writer));
+        modifiedResponse = writer.toString();
+        } catch (Exception e) {
+        	logger.error( e.getMessage()
+					+ projectDetailsPojo.getProjectName() + " , " + projectDetailsPojo.getComponentName() + " , "+ projectDetailsPojo.getStreamName());
+    	}
+        return modifiedResponse;
+	}
 	/**
 	 * method to delete the attribute data type
 	 * 
@@ -542,7 +687,6 @@ public class RestUtility {
 		String attributeDataTypeUrl = null;
 		String attributeDataTypeUsageurl = null;
 		Boolean dataTypeUsed = false;
-		
 
 		try {
 
@@ -639,9 +783,8 @@ public class RestUtility {
 				}
 
 			}
-
+			
 		} catch (Exception e) {
-			// TODO: handle exception
 			logger.error("Exception while deleting the attribute " + attributeName
 					+ " from the project properties in the project " + projectDetailsPojo.getProjectName() + " , "
 					+ projectDetailsPojo.getComponentName() + " , " + projectDetailsPojo.getStreamName());
@@ -702,7 +845,6 @@ public class RestUtility {
 				return true;
 			}
 		} catch (Exception e) {
-			// TODO: handle exception
 			logger.error("Exception while removing the attribute " + attributeName + " from the artifact type "
 					+ artifactTypeName + " in the project " + projectDetailsPojo.getProjectName() + " , "
 					+ projectDetailsPojo.getComponentName() + " , " + projectDetailsPojo.getStreamName());
@@ -850,7 +992,8 @@ public class RestUtility {
 				return null;
 			}
 			input = response.getEntity().getContent();
-
+			
+			
 			DocumentBuilderFactory docBuild = DocumentBuilderFactory.newInstance();
 			docBuild.setNamespaceAware(true);
 			DocumentBuilder db = docBuild.newDocumentBuilder();
@@ -973,7 +1116,6 @@ public class RestUtility {
 		}
 
 	}
-
 	/**
 	 * method to PUT request for a given URL
 	 * 
@@ -989,7 +1131,6 @@ public class RestUtility {
 		StringEntity entity = null;
 		HttpPut putRequest = new HttpPut(putRequestUrl);
 		try {
-
 			entity = new StringEntity(putRequestBody);
 			putRequest.setEntity(entity);
 			for (Entry<String, String> entry : headersMap.entrySet()) {
@@ -1002,7 +1143,7 @@ public class RestUtility {
 
 		} catch (Exception e) {
 			// TODO: handle exception
-			logger.error("exception while PUT request for the url " + putRequestUrl);
+			logger.error("Exception while PUT request for the url " + putRequestUrl);
 			return null;
 		}
 
@@ -1010,7 +1151,6 @@ public class RestUtility {
 			putRequest.releaseConnection();
 		}
 	}
-
 	/**
 	 * Delete request for a given URL
 	 * 
