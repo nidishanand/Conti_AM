@@ -5,6 +5,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import javax.swing.JOptionPane;
+import javax.xml.transform.TransformerException;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.lyo.client.oslc.jazz.JazzFormAuthClient;
@@ -15,6 +17,7 @@ import com.conti.pojo.ArtifactAttributePojo;
 import com.conti.pojo.AttributeDataTypePojo;
 import com.conti.pojo.AttributeDetailsPojo;
 import com.conti.pojo.ConfigDetailsPojo;
+import com.conti.pojo.LinkConstraintsPojo;
 import com.conti.pojo.ProjectDetailsPojo;
 import com.conti.utility.ChangeSetUtility;
 import com.conti.utility.ExcelUtility;
@@ -36,9 +39,10 @@ public class DeleteAttributeApplication {
 	private static String baselineName = null;
 	private static String deliverChangeSet = null;
 	private static HashMap<String, String> workflowUpdateMap = null;
-	private static Boolean deleteAttributeFlag = false,deleteDataTypeFlag=false, updateFlag = false, delete_update = false;
+	private static Boolean deleteAttributeFlag = false,deleteDataTypeFlag=false, updateFlag = false, delete_update = false, delete_lc = false;
 	private static ArrayList<ArtifactAttributePojo> artifactAttributePojos = null;
 	private static ArrayList<AttributeDataTypePojo> attributeDataTypePojos = null;
+	private static ArrayList<LinkConstraintsPojo> linkconstraintsPojos = null;
 	static String currentDir = System.getProperty("user.dir");
 	private static Logger logger = LogManager.getLogger(DeleteAttributeApplication.class);
 
@@ -65,10 +69,14 @@ public class DeleteAttributeApplication {
 			{
 				attributeDataTypePojos= attributeDetailsPojo.getAttributeDataTypePojos();
 			}
-			
+			if(attributeDetailsPojo.getLinkConstraintsPojos().size()>0) {
+				linkconstraintsPojos = attributeDetailsPojo.getLinkConstraintsPojos();
+			}
 			if (attributeDetailsPojo.getWorkflowDetailsMap().size() > 0) {
 				workflowUpdateMap = attributeDetailsPojo.getWorkflowDetailsMap();
 			}
+			
+			
 			if (action.equals("Delete_Attribute")) {
 				deleteAttributeFlag = true;
 			} 
@@ -80,6 +88,8 @@ public class DeleteAttributeApplication {
 				updateFlag = true;
 			} else if (action.equals("Delete_Update")) {
 				delete_update = true;
+			} else if(action.equals("Delete_LinkConstraints")) {
+				delete_lc = true;
 			}
 
 		} catch (Exception e) {
@@ -132,8 +142,8 @@ public class DeleteAttributeApplication {
 	 * @return Boolean value
 	 */
 	public static boolean DeleteAttribute_UpdateWorkflowApplication() {
-		System.out.println("-------------Delete attributes & Update workflow application started-----------------");
-		logger.info("-------------Delete attributes & Update workflow application started-----------------");
+		System.out.println("-------------Delete attributes , Update workflow And Delete LinkConstraints application started-----------------");
+		logger.info("-------------Delete attributes , Update workflow And Delete LinkConstraints application started-----------------");
 		ExcelUtility excelUtility = new ExcelUtility();
 		DNGLoginUtility dngLoginUtility = new DNGLoginUtility();
 		try
@@ -144,6 +154,7 @@ public class DeleteAttributeApplication {
 					if (projectDetailsPojo.getImplementationRequired().equals(Constants.Yes)) {
 						logger.info("<<<<<<Application running for the project "+projectDetailsPojo.getProjectName() + " , "
 								+ projectDetailsPojo.getComponentName() + " , " + projectDetailsPojo.getStreamName()+">>>>>>>>");
+
 						JazzFormAuthClient client = dngLoginUtility.login(userName, password, serverUrl,
 								projectDetailsPojo.getProjectName());
 						if (client == null) {
@@ -167,6 +178,11 @@ public class DeleteAttributeApplication {
 							deleteAttributes(projectDetailsPojo) ;
 							deleteAttributeDataType(projectDetailsPojo);
 							updateWorkflow(projectDetailsPojo);
+							deleteLinkConstraints(projectDetailsPojo);
+							
+						} else if(delete_lc){
+							
+							deleteLinkConstraints(projectDetailsPojo);
 							
 						}
 						System.out.println("Execution completed for project "+projectDetailsPojo.getProjectName() + " , "
@@ -183,13 +199,9 @@ public class DeleteAttributeApplication {
 			return true;
 		}
 		catch (Exception e) {
-			// TODO: handle exception
 			logger.error("Exception in the delete attribute and update worklflow application " +e);
 			return false;
 		}
-		
-
-
 	}
 	
 	/**
@@ -244,10 +256,40 @@ public class DeleteAttributeApplication {
 					+ projectDetailsPojo.getComponentName() + " , " + projectDetailsPojo.getStreamName());
 			return false;
 		}
-
-
 	}
 	
+	public static boolean deleteLinkConstraints(ProjectDetailsPojo projectDetailsPojo)
+	{
+		
+		try {
+		RestUtility restUtility = new RestUtility();
+		AttributeDetailsPojo attributeDetailsPojo = new AttributeDetailsPojo();
+		
+		attributeDetailsPojo = attributeDetailsPojo.setLinkConstraintsPojos(linkconstraintsPojos);
+		
+		for(LinkConstraintsPojo pojolisvar:linkconstraintsPojos) {
+			
+			if(restUtility.deletelinkConstraint(projectDetailsPojo.getClient(),pojolisvar,projectDetailsPojo)) {
+				logger.info("Deleted Link Constraint :"+pojolisvar.getSourceLink()+" , "+pojolisvar.getLinkType()+" , "+pojolisvar.getTargetLink()+" . In Project Area : " + projectDetailsPojo.getProjectName() + " , " + projectDetailsPojo.getComponentName() + " , "+ projectDetailsPojo.getStreamName());
+			}
+			else {
+				logger.info("Could not Delete Link Constraint :"+pojolisvar.getSourceLink()+" , "+pojolisvar.getLinkType()+" , "+pojolisvar.getTargetLink()+" . In Project Area : "+ projectDetailsPojo.getProjectName() + " , " + projectDetailsPojo.getComponentName() + " , "+ projectDetailsPojo.getStreamName() + "Check is the Entered LinkConstraint Values are Correct .");
+			}
+		}
+		
+		if(!delete_update)
+		{
+		DeleteAttributeApplication.deliverChangeset(projectDetailsPojo.getClient(), projectDetailsPojo);
+		}
+	}
+	catch (Exception e) {
+		
+		logger.error("Exception while deleting the attributes "+ e +" for the project "+projectDetailsPojo.getProjectName() + " , "
+				+ projectDetailsPojo.getComponentName() + " , " + projectDetailsPojo.getStreamName());
+		
+	}
+		return true;
+	}
 	/**
 	 * method to delete the attribute data type
 	 * @param projectDetailsPojo
@@ -276,13 +318,11 @@ public class DeleteAttributeApplication {
 				}
 				else if (attributeDataTypePojo.getDataTypeValues() != null && attributeDataTypePojo.getDataTypeValues() != "")
 				{
-					
 					dataTypeValues.addAll(Arrays.asList(attributeDataTypePojo.getDataTypeValues().split(",")));
 					deleteDataTypeValueStatus = restUtility.deleteDataTypeValuesFromAttribute(
 									projectDetailsPojo.getClient(), dataTypeValues, projectDetailsPojo, attributeDetailsPojo,
 									attributeDataTypePojo);
 				}
-					
 			}
 			
 			if(!delete_update)
@@ -308,6 +348,8 @@ public class DeleteAttributeApplication {
 		
 		
 	}
+
+
 
 	/**
 	 * Method to deliver the changeset
