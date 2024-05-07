@@ -11,6 +11,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Scanner;
 
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultCellEditor;
@@ -39,23 +40,24 @@ import com.conti.pojo.ArtifactAttributePojo;
 import com.conti.pojo.AttributeDataTypePojo;
 import com.conti.pojo.AttributeDetailsPojo;
 import com.conti.pojo.ConfigDetailsPojo;
-
+import com.conti.pojo.LinkConstraintsPojo;
 
 @SuppressWarnings("serial")
 public class DeleteAttributeGUI extends JFrame implements ActionListener {
 
-	JButton b1, b2,b3, nextButton1, nextButton2,nextButton3, updatewf, updateboth;
+	JButton b1, b2,b3, nextButton1, nextButton2,nextButton3, updatewf, updateboth, updatelc;
 	JRadioButton rb1, rb2, rb3, rb4;
-	final JProgressBar jb, jb1,jb2,jb3;
+	final JProgressBar jb, jb1,jb2,jb3,jb4;
 	ButtonGroup group, group1;
 	JPanel newPanel, buttonPanel, radioButtonPanel1, attributePanel;
 	JLabel userLabel, passLabel, serverUrlLabel, inputFileNameLabel, baselineNameLabel, changeSetNameLabel,
 			deliverChangeSetLabel, artifactTypeDetailsLabel;
 	DefaultTableModel model;
-	JTable attributeTable, workflowTable,attributeDataTypeTable;
+	JTable attributeTable, workflowTable,attributeDataTypeTable,linkConstraintsTable;
 	JTabbedPane tabbedPane;
 	final static String Config_PANEL = "Config Details";
 	final static String Attribute_PANEL = "Attribute Details";
+	final static String LinkConstraint_PANEL = "LinkConstraints Details";
 	final static String Workflow_PANEL = "Workflow Details";
 	final static String AttributeDataType_PANEL = "Attribute Data Type Details";
 
@@ -138,6 +140,7 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 
 		updatewf = new JButton("Update Workflow");
 		updateboth = new JButton("Update All");
+		updatelc = new JButton("Delete LinkConstraints");
 		// b1.setBackground(new Color(255, 204, 153));
 
 		buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -173,6 +176,12 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 		jb3.setStringPainted(true);
 		jb3.setFocusable(false);
 		jb3.setVisible(false);
+		
+		jb4 = new JProgressBar();
+		jb4.setString("Updating Link Constraints......");
+		jb4.setStringPainted(true);
+		jb4.setFocusable(false);
+		jb4.setVisible(false);
 
 		GridBagConstraints gbc = new GridBagConstraints();
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -204,6 +213,7 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 
 		JFrame attributeFrame = setupAttributeDetailsPanel();
 		JFrame attributeDataTypeFrame= setupAttributeDataTypeDetailsPanel();
+		JFrame linkConstraintsFrame = setLinkConstraintsDetailsPanel();
 		JFrame Workflowframe = setupWorkflowPanel();
 
 		gui.add(newPanel);
@@ -212,16 +222,18 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 		tabbedPane.addTab(Config_PANEL, gui);
 		tabbedPane.addTab(Attribute_PANEL, attributeFrame.getContentPane());
 		tabbedPane.addTab(AttributeDataType_PANEL, attributeDataTypeFrame.getContentPane());
-		tabbedPane.add(Workflow_PANEL, Workflowframe.getContentPane());
-
+		tabbedPane.addTab(LinkConstraint_PANEL, linkConstraintsFrame.getContentPane());
+		tabbedPane.addTab(Workflow_PANEL, Workflowframe.getContentPane());
+		
 		this.setContentPane(tabbedPane);
 
 		b1.addActionListener(this);
 		b3.addActionListener(this);
 		updatewf.addActionListener(this);
 		updateboth.addActionListener(this);
+		updatelc.addActionListener(this);
 
-		setTitle("DELETE ATTRIBUTES & UPDATE WORKFLOW APPLICATION V2.0");
+		setTitle("DELETE ATTRIBUTES & UPDATE WORKFLOW & DELETE LINKCONSTRAINTS APPLICATION V2.0");
 
 	}
 
@@ -256,6 +268,37 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 		frame.add(btnPnl, BorderLayout.SOUTH);
 		return frame;
 
+	}
+	
+	public JFrame setLinkConstraintsDetailsPanel() {
+		
+		JFrame frame = new JFrame();
+
+		frame.setLayout(new BorderLayout());
+		JPanel btnPnl = new JPanel(new BorderLayout());
+		JPanel tablePnl = new JPanel();
+
+		JPanel bottombtnPnl = new JPanel(new FlowLayout(FlowLayout.CENTER));
+		JTable table = createLinkConstraintsTable();
+		JScrollPane scrollPane = new JScrollPane(table);
+		scrollPane.setBounds(10, 38, 40, 5);
+		tablePnl.add(scrollPane);
+		tablePnl.setPreferredSize(new Dimension(50, 187));
+
+		bottombtnPnl.add(updatelc);
+		bottombtnPnl.add(jb4);
+		bottombtnPnl.setBackground(new Color(229, 255, 204));
+
+		btnPnl.add(bottombtnPnl, BorderLayout.CENTER);
+		btnPnl.setBackground(new Color(229, 255, 204));
+		btnPnl.setLayout(new GridBagLayout());
+		
+		frame.add(tablePnl, BorderLayout.NORTH);
+
+		frame.add(btnPnl, BorderLayout.SOUTH);
+		return frame;
+
+		
 	}
 	
 	public JFrame setupAttributeDataTypeDetailsPanel()
@@ -377,8 +420,6 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 		 * } });
 		 */
 		
-		
-		
 		// artifactTypePnl.setBorder(new EmptyBorder(4, 4, 4, 4));
 		bottombtnPnl.add(b1);
 		bottombtnPnl.add(jb);
@@ -446,6 +487,28 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 			return preConditonsSet;
 		
 	}
+	
+	public Boolean linkConstraintsTablePreCondtions(LinkConstraintsPojo linkConstraintsPojo)
+	{
+		Boolean preConditonsSet= true;
+		
+			if(linkConstraintsPojo.getSourceLink()== null ||linkConstraintsPojo.getSourceLink().isEmpty())
+			{
+				JOptionPane.showMessageDialog(null, "Please senter the Source Artifact Link");
+				preConditonsSet= false;
+			}
+			else if(linkConstraintsPojo.getLinkType()== null || linkConstraintsPojo.getLinkType().isEmpty())
+			{
+				JOptionPane.showMessageDialog(null, "Please enter the Link type");
+				preConditonsSet= false;
+			}
+			else if(linkConstraintsPojo.getTargetLink()== null || linkConstraintsPojo.getTargetLink().isEmpty())
+			{
+				JOptionPane.showMessageDialog(null, "Please enter the Target Aitifact Link");
+				preConditonsSet= false;
+			}
+			return preConditonsSet;
+	}
 
 	public JTable createAttributeTable() {
 
@@ -493,7 +556,17 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 		return workflowTable;
 
 	}
+	
+	public JTable createLinkConstraintsTable() {
 
+				String[] cols = { "<html><b>Source Artifact Type", "<html><b>Link Type", "<html><b>Target Artifact Type" };
+				model = new DefaultTableModel(cols, 10);
+				linkConstraintsTable = new JTable(model);
+
+				return linkConstraintsTable;
+		
+	}
+	
 	public String inputFileAction() {
 		JFileChooser inputFile = new JFileChooser();
 		inputFile.showOpenDialog(this);
@@ -504,7 +577,6 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 		else {
 			return null;
 		}
-
 	}
 	
 	public AttributeDetailsPojo readAttributeDataTypePaneDetails()
@@ -633,7 +705,60 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 		attributeDetailsPojo.setWorkflowDetailsMap(workFlowDetailsMap);
 		return attributeDetailsPojo;
 	}
+	
+	public AttributeDetailsPojo readLinkConstraintsPanelDetails()
+	{
+		
+		AttributeDetailsPojo attributeDetailsPojo = new AttributeDetailsPojo();
+		ArrayList<LinkConstraintsPojo> linkConstraintPojos= new ArrayList<>();
+		
+		for(int count = 0; count < linkConstraintsTable.getModel().getRowCount(); count++)
+		{
+			if (linkConstraintsTable.getModel().getValueAt(count, 0) != null && linkConstraintsTable.getModel().getValueAt(count, 0) !="") {
+				LinkConstraintsPojo LinkConstraintsPojo= new LinkConstraintsPojo();
+				
+				if(linkConstraintsTable.getModel().getValueAt(count, 1)!=null)
+				{
+					LinkConstraintsPojo.setLinkType(linkConstraintsTable.getModel().getValueAt(count, 1).toString().trim());
+					LinkConstraintsPojo.setTargetLink(linkConstraintsTable.getModel().getValueAt(count, 2).toString().trim());
+				}
+				
+				LinkConstraintsPojo.setSourceLink(linkConstraintsTable.getModel().getValueAt(count, 0).toString().trim());
+				linkConstraintPojos.add(LinkConstraintsPojo);
+				
+			}
+			else if (linkConstraintsTable.getModel().getValueAt(count, 1)!=null  && linkConstraintsTable.getModel().getValueAt(count, 1) !="")
+			{
+				LinkConstraintsPojo LinkConstraintsPojo= new LinkConstraintsPojo();
+				
+				LinkConstraintsPojo.setSourceLink("");
+				LinkConstraintsPojo.setLinkType(linkConstraintsTable.getModel().getValueAt(count, 1).toString().trim());
+				if(linkConstraintsTable.getModel().getValueAt(count, 2)!=null)
+				{
+					LinkConstraintsPojo.setTargetLink(linkConstraintsTable.getModel().getValueAt(count, 2).toString().trim());
+				}
+				linkConstraintPojos.add(LinkConstraintsPojo);
+			}
+			
+			else if (linkConstraintsTable.getModel().getValueAt(count, 2)!=null  && linkConstraintsTable.getModel().getValueAt(count, 2) !="")
+			{
+				LinkConstraintsPojo LinkConstraintsPojo= new LinkConstraintsPojo();
+				LinkConstraintsPojo.setSourceLink("");
+				LinkConstraintsPojo.setLinkType("");
+				LinkConstraintsPojo.setTargetLink(linkConstraintsTable.getModel().getValueAt(count, 2).toString().trim());
+				linkConstraintPojos.add(LinkConstraintsPojo);
+			}
+			
+			else {
 
+				continue;
+			}
+		}
+				
+		attributeDetailsPojo.setLinkConstraintsPojos(linkConstraintPojos);
+		return attributeDetailsPojo;
+		
+	}
 
 	public void actionPerformed(ActionEvent e) {
 		
@@ -643,8 +768,71 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 			JOptionPane.showMessageDialog(null, "Please enter all the Config Details");
 			tabbedPane.setSelectedIndex(0);
 
-		}
-		else if (e.getSource()==updatewf)
+		}else if(e.getSource()==updatelc) {
+			
+			AttributeDetailsPojo attributeDetailsPojo = readLinkConstraintsPanelDetails();
+			
+			ConfigDetailsPojo configDetailsPojo = setConfigDetails();
+			
+			 if (attributeDetailsPojo.getLinkConstraintsPojos().size() < 1) {
+				 JOptionPane.showMessageDialog(null, "Please enter all the values in the table !!");
+			}
+			 else
+			 {
+				 ArrayList<LinkConstraintsPojo> LinkConstraintsList= attributeDetailsPojo.getLinkConstraintsPojos();
+					for(LinkConstraintsPojo linkConstraintsPojo:LinkConstraintsList)
+					{
+						if(!linkConstraintsTablePreCondtions(linkConstraintsPojo))
+						{
+							return ;
+						}
+					}
+					updatelc.setVisible(false);
+					jb4.setVisible(true);
+					jb4.setIndeterminate(true);
+					tabbedPane.setEnabledAt(0, false);
+					tabbedPane.setEnabledAt(1, false);
+				    tabbedPane.setEnabledAt(2, false);
+				    tabbedPane.setEnabledAt(4, false);
+				    
+				    DeleteAttributeApplication.loadConfigProperties(configDetailsPojo, attributeDetailsPojo, "Delete_LinkConstraints");
+					new Thread(new Runnable() {
+						@Override
+						public void run() {
+
+							final Boolean deleteCompleted = DeleteAttributeApplication.DeleteAttribute_UpdateWorkflowApplication();
+
+							SwingUtilities.invokeLater(new Runnable() {
+								@Override
+								public void run() {
+
+									if (deleteCompleted) {
+										jb4.setIndeterminate(false);
+										tabbedPane.setEnabledAt(0, true);
+										tabbedPane.setEnabledAt(1, true);
+									    tabbedPane.setEnabledAt(2, true);
+									    tabbedPane.setEnabledAt(4, true);
+										jb4.setVisible(false);
+										updatelc.setVisible(true);
+										JOptionPane.showMessageDialog(null, "Deleting Link Constraints completed. Please check the logs for any errors.");
+									}
+									else {
+										jb4.setIndeterminate(false);
+										tabbedPane.setEnabledAt(0, true);
+										tabbedPane.setEnabledAt(1, true);
+									    tabbedPane.setEnabledAt(2, true);
+									    tabbedPane.setEnabledAt(4, true);
+										jb4.setVisible(false);
+										updatelc.setVisible(true);
+										JOptionPane.showMessageDialog(null, "Deleting Link Constraints completed with errors. Please check the logs!!");
+									}
+								}
+							});
+
+						}
+					}).start();
+			 }
+		}else if (e.getSource()==updatewf)
          {
 			 	
 			 AttributeDetailsPojo attributeDetailsPojo = readWorkFlowPanelDetails();
@@ -708,10 +896,12 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 		else if(e.getSource()==updateboth)
 		{
 			AttributeDetailsPojo attributeDetailsPojo = readAttributePaneDetails();
+			AttributeDetailsPojo attributeDetailsPojo1 = readLinkConstraintsPanelDetails();
 			AttributeDetailsPojo attributeDetailsPojo2 = readWorkFlowPanelDetails();
 			AttributeDetailsPojo attributeDetailsPojo3 = readAttributeDataTypePaneDetails();
 			attributeDetailsPojo.setWorkflowDetailsMap(attributeDetailsPojo2.getWorkflowDetailsMap());
 			attributeDetailsPojo.setAttributeDataTypePojos(attributeDetailsPojo3.getAttributeDataTypePojos());
+			attributeDetailsPojo.setLinkConstraintsPojos(attributeDetailsPojo1.getLinkConstraintsPojos());
 			
 			ConfigDetailsPojo configDetailsPojo = setConfigDetails();
 			
@@ -727,6 +917,10 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 				else if (attributeDetailsPojo3.getAttributeDataTypePojos().size()<1)
 				{
 					JOptionPane.showMessageDialog(null, "Please enter all the values in the table for each attribute data Type!!!!");
+					
+				}else if (attributeDetailsPojo1.getLinkConstraintsPojos().size() < 1) 
+				{
+					 JOptionPane.showMessageDialog(null, "Please enter all the values in the Link Constraints table !!");
 				}
 			 
 				else
@@ -757,7 +951,7 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 									    jb2.setVisible(false);
 										updateboth.setVisible(true);
 										workflowTable.setEnabled(true);
-										JOptionPane.showMessageDialog(null, "Deleting attributes , data types and updating workflow completed . Please check the logs for any errors");
+										JOptionPane.showMessageDialog(null, "Deleting attributes , data types , link constraints and updating workflow completed . Please check the logs for any errors");
 										
 									}
 									else {
@@ -767,7 +961,7 @@ public class DeleteAttributeGUI extends JFrame implements ActionListener {
 										jb2.setVisible(false);
 										updateboth.setVisible(true);
 										workflowTable.setEnabled(true);
-										JOptionPane.showMessageDialog(null, "Deleting attributes and updating workflow completed completed with some errors. Please check logs!!");
+										JOptionPane.showMessageDialog(null, "Deleting attributes, link constraints and updating workflow completed completed with some errors. Please check logs!!");
 									}
 
 								}
