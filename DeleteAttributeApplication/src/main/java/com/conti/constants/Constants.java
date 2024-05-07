@@ -73,7 +73,8 @@ public class Constants {
 	public static final String string="string";
 	public static final String workflow_types="types/workflow/attrdef";
 	public static final String Actual_Response="actualResponse";
-	
+	public static final String LinkType="rm:LinkType";
+	public static final String LinkConsurl="/linkConstraints/LC_KDazAJCwEeytoNwqecO6PA";
 	public static final String RM_AttributeDef="rm:AttributeDefinition";
 	public static final String RM_AttributeType = "rm:AttributeType";
 	public static final String RM_EnumEntry= "rm:enumEntry";
@@ -85,8 +86,13 @@ public class Constants {
 	public static final String RM_hasWorkFlowAttr="rm:hasWorkflowAttribute";
 	public static final String RM_hasAttribute="rm:hasAttribute";
 	public static final String RM_AttrOrdering="rm:attributeOrdering";
-	
+	public static final String Linkconstraints="/linkConstraints";
 	public static final String NS_containedResources= "ns:containedResources";
+	public static final String RM_Linkconstraints="rm:LinkConstraints";
+	public static final String RM_Allowedpattern="rm:AllowedPattern";
+	public static final String RM_objectpattern="rm:objectPattern";
+	public static final String RM_predicatepattern="rm:predicatePattern";
+	public static final String RM_subjectpattern="rm:subjectPattern";
 	public static final String DELIVERY_Session_body="<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
 			+ "<rdf:RDF\r\n"
 			+ "    xmlns:dcterms=\"http://purl.org/dc/terms/\"\r\n"
@@ -127,6 +133,7 @@ public class Constants {
 			+ "xmlns:xs=\"http://www.w3.org/2001/XMLSchema#\"\r\n"
 			+ "xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\r\n"
 			+ "xmlns:h=\"http://www.w3.org/TR/REC-html40\">" + "actualResponse" + "</rdf:RDF>";
+	
 	
 
 }
