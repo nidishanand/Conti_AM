@@ -15,11 +15,23 @@ public class AttributeDetailsPojo {
 	private ArrayList<String> artifactTypeList = new ArrayList<>();
 	private HashMap<String, String> attributeUrlMap = new HashMap<>();
 	private HashMap<String, String> workflowDetailsMap= new HashMap<>();
+
 	private HashMap<String, String> attributeDataTypeUrlMap = new HashMap<>();
 	private ArrayList<ArtifactAttributePojo> artifactAttributePojos= new ArrayList<>();
 	private ArrayList<AttributeDataTypePojo> attributeDataTypePojos= new ArrayList<>();
+	private ArrayList<LinkConstraintsPojo> linkConstraintsPojos= new ArrayList<>();
 	
-	
+
+
+
+	public ArrayList<LinkConstraintsPojo> getLinkConstraintsPojos() {
+		return linkConstraintsPojos;
+	}
+
+	public AttributeDetailsPojo setLinkConstraintsPojos(ArrayList<LinkConstraintsPojo> linkConstraintsPojos) {
+		this.linkConstraintsPojos = linkConstraintsPojos;
+		return null;
+	}
 
 	public HashMap<String, String> getAttributeDataTypeUrlMap() {
 		return attributeDataTypeUrlMap;
@@ -66,5 +78,6 @@ public class AttributeDetailsPojo {
 	public void setArtifactTypeList(ArrayList<String> artifactTypeList) {
 		this.artifactTypeList = artifactTypeList;
 	}
+
 
 }
